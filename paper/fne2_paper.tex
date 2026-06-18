@@ -1,0 +1,183 @@
+\documentclass[11pt,a4paper]{article}
+
+% ─── Packages (FNE-I에서 검증된 프리앰블 재사용) ───
+\usepackage{cmap}
+\input{glyphtounicode}
+\pdfgentounicode=1
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{setspace}
+\onehalfspacing
+
+\title{\textbf{Field Geometry Incompletely Reconstructs Realized\\Vortical Adjacency in Turbulent Dissipation Forecasting}}
+\author{Kyeongmin Kim\\
+\small Independent Researcher\\
+\small \texttt{rudals7047@gmail.com}}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+% ════════════════════════════════════════
+\begin{abstract}
+Prior studies of turbulence have separately shown that local field-geometry descriptors (velocity gradients, strain-rate magnitude) predict dissipation-related quantities with high skill, and that vortex-topology dynamics such as reconnection shape dissipation bursts. What remains unquantified is whether low-order field geometry actually recovers the realized vortical organization, and whether topological structure carries predictive information about dissipation beyond what such field-geometry features provide. We address this using a coarse-grained Eulerian-cell representation of forced isotropic turbulence (Johns Hopkins Turbulence Database, $128^3$ subdomain, $\mathrm{Re}_\lambda \approx 433$, 100 stored frames), constructing a vortex skeleton graph from the swirling strength and vorticity alignment and adapting the relational-advantage framework recently developed for granular force-network ensembles. In an incremental forecasting design that includes a persistence baseline and field-geometry features, relational (graph) features add positive predictive value for future cell dissipation at every horizon tested ($\Delta R^2(R\,|\,Y,O) > 0$ with bootstrap 95\% CIs excluding zero for horizons $H \geq 5$ frames). This relational gain increases monotonically with prediction horizon (from $\approx 0$ at $H{=}1$ to $0.011$ at $H{=}45 \approx 2\tau_\eta$), the signature expected if topology encodes slowly-evolving structural information. The gain survives five robustness checks: it persists against a strengthened geometric baseline that explicitly includes vorticity and velocity-gradient-tensor invariants (about 70\% of the signal at the longest horizon), excluding the objection that it merely re-encodes local gradient information; higher-order graph structure adds signal beyond degree alone (excluding a pure counting artifact); the effect persists under gradient-boosted models (excluding a linear-model artifact); degree is the most geometry-recoverable of the graph statistics, so reporting the index on degree is conservative; and the direction is stable across nine combinations of skeleton-construction thresholds. We adapt the Contact Realization Underdetermination index, obtaining $\mathrm{CRU}_{\text{turb}} = 0.58$: field geometry recovers only about half the variance in skeleton degree, despite vorticity being formally a derivative of velocity. This places turbulence at an intermediate position---well above glassy dynamics ($\mathrm{CRU} \approx 0$) and below granular force networks ($\mathrm{CRU} = 0.94$--$0.99$)---which we interpret, as a hypothesis, as an \emph{epistemic} rather than \emph{ontic} form of underdetermination. Turbulence thus provides a second, mechanistically distinct instance in which relational structure carries predictive information that coordinate-based descriptions miss.
+\end{abstract}
+
+% ════════════════════════════════════════
+\section{Introduction}
+
+Predicting the local rate of energy dissipation in turbulent flow from field quantities is a long-standing problem, relevant both to subgrid-scale modeling and to the physics of the energy cascade. The dominant modern approach---including recent machine-learning models---takes field-geometry quantities such as velocity gradients, strain-rate magnitude, and pressure as inputs [1,2]. These quantities are local and instantaneous, and they predict dissipation with considerable skill. What they do not directly represent is the \emph{topological} organization of the vorticity field: which vortical regions are connected, how those connections are arranged, and how that arrangement changes in time.
+
+That topological organization is known to matter dynamically. Vortex reconnection---the abrupt change in the connectivity of vortex lines---has been shown to drive energy toward small scales and has been proposed as a dominant pathway in the cascade [3,4]. However, this body of work has largely studied idealized initial-value configurations: anti-parallel tubes, trefoil knots, colliding rings. The quantitative question of whether topological structure carries \emph{predictive} information about dissipation, in statistically stationary turbulence and relative to a field-geometry baseline, has not been directly addressed.
+
+A separate line of work has represented turbulence as a network. Following the introduction of vortical-interaction networks built from the induced velocity between grid cells [5], network representations have been applied to wall turbulence, to isotropic and MHD turbulence, and to the time evolution of vortical structures [6,7]. These representations have been used for structural characterization, for reduced-order modeling, and for flow control via the targeting of network hubs [8]. They have not, to our knowledge, been used to ask whether network (relational) variables predict a physical target better than, or beyond, geometric variables---the question we pose here.
+
+We approach this question by adapting a framework developed for granular force-network ensembles (FNE) [9]. There, coordinate geometry was found to underdetermine the realized contact structure of a granular packing: a Contact Realization Underdetermination index reached $\mathrm{CRU} = 0.94$--$0.99$ in large systems, and the magnitude of this geometric underdetermination was associated with the predictive advantage of relational (contact-network) features over geometric ones. Granular underdetermination is \emph{ontic}: at the rigid-grain limit, force balance genuinely fails to fix which contacts bear load [10,11].
+
+Turbulence may present a different---and we argue \emph{epistemic}---case. Here vorticity is, formally, a derivative of the velocity field; topology is not undetermined in principle. The relevant question is instead whether low-order field-geometry features, of the kind used in practice, \emph{recover} the topological organization, or whether that organization carries information they miss. We therefore ask two questions in direct parallel to [9]: (i) to what extent does field geometry fail to predict vortex-skeleton structure ($\mathrm{CRU}_{\text{turb}}$), and (ii) does topological information predict future dissipation beyond what field geometry and persistence provide?
+
+In short, prior turbulence work has separately shown that (i) low-order field geometry predicts dissipation-related quantities with high skill, and (ii) vortex reconnection influences dissipation bursts. What remains unquantified is whether low-order field geometry actually recovers the realized vortical organization, and whether a failure at that intermediate step accounts for any predictive advantage of relational descriptions. This intermediate step---geometry to realized topology---is the gap we measure.
+
+We find that vortex-topology features add predictive information for future dissipation beyond field geometry, that this gain grows with prediction horizon, and that it is robust to model class and to skeleton-construction choices. We interpret these results through the contrast between ontic and epistemic underdetermination, positioning turbulence relative to granular force networks and glassy dynamics on a common axis. We emphasize at the outset that our analysis identifies predictive association, not causation, and that our skeleton graph is a coarse cell-based proxy rather than a reconstruction of vortex lines.
+
+% ════════════════════════════════════════
+\section{Methods}
+
+\subsection{Data}
+We use the forced isotropic turbulence dataset of the Johns Hopkins Turbulence Database (JHTDB) [1], at $\mathrm{Re}_\lambda \approx 433$. We adopt the dataset's documented parameters: kinematic viscosity $\nu = 1.85\times10^{-4}$, mean dissipation $\langle\epsilon\rangle \approx 0.092$, Kolmogorov length $\eta \approx 0.00287$ and time $\tau_\eta \approx 0.045$ [1]. The stored data span a statistically stationary interval with frame spacing $\delta t = 0.002$; since $\delta t \approx 0.044\,\tau_\eta$, consecutive stored frames are far finer than the dissipative time scale and frame-to-frame evolution can be tracked. We extract a $128^3$ gridded cutout (snapshots 500--599, i.e.\ 100 consecutive frames) of the velocity and pressure fields.
+
+\subsection{Cell representation and target}
+The $128^3$ field is partitioned into cubic cells of $8^3$ grid points, giving $16^3 = 4{,}096$ Eulerian cells per frame. With a grid spacing of $\approx 2.2\eta$ for this dataset, each cell spans $\approx 18\eta$ on a side; the cells are therefore coarser than individual vortex tubes (whose cores are a few $\eta$), so a cell aggregates rather than resolves fine vortical structure. This is a deliberate trade-off: the cell is the analogue of a ``particle'' in the granular framework, and the skeleton graph is correspondingly a coarse adjacency description, not a vortex-line reconstruction (see Limitations). Each stored frame plays the role of a compression cycle. The prediction target is the cell-mean dissipation rate,
+\begin{equation}
+Y_i = \langle 2\nu\, S_{jk} S_{jk} \rangle_{\text{cell } i},
+\qquad S_{jk} = \tfrac{1}{2}(\partial_j u_k + \partial_k u_j),
+\end{equation}
+where velocity gradients are computed by central differences on the grid.
+
+\subsection{Geometric and relational features}
+\textbf{Geometric features ($O$, $k=5$).} Cell-mean velocity magnitude $|\mathbf{u}|$, velocity-gradient norm $|\nabla\mathbf{u}|$, strain magnitude $|S|$, pressure $p$, and kinetic energy density $\tfrac{1}{2}|\mathbf{u}|^2$. Vorticity is excluded from this baseline $O$ to keep the geometric and relational channels distinct, since the skeleton is built partly from vorticity alignment. This exclusion could be objected to---vorticity is itself a field-geometry quantity---so we do not rely on it: Section~\ref{sec:robust} repeats the entire analysis against a strengthened geometric baseline $O_{\text{strong}}$ that explicitly includes vorticity magnitude and velocity-gradient-tensor invariants, and shows the relational gain survives.
+
+\textbf{Relational features ($R$, $k=5$).} Degree, clustering coefficient, 2-hop connectivity, betweenness centrality, and local coordination variance, all computed on the vortex skeleton graph defined below. Both feature sets use $k=5$ for complexity-matched comparison.
+
+\subsection{Vortex skeleton graph}
+A cell is a graph node if its swirling strength $\lambda_{ci}$ (the imaginary part of the complex eigenvalue of the cell velocity-gradient tensor) exceeds a threshold, $\lambda_{ci} > \lambda_{\text{th}}\cdot\lambda_{ci,\text{rms}}$. Two adjacent vortical cells (6-neighborhood) are connected by an edge if their cell-mean vorticity vectors are aligned, $|\cos\theta| > \alpha_{\text{th}}$. The baseline thresholds are $\lambda_{\text{th}} = 1.0$ and $\alpha_{\text{th}} = 0.7$; threshold sensitivity is examined in Section~\ref{sec:robust}. This construction is a variant of the cell-based vortical-network representation of [5]; unlike that line of work, which uses the network for structural characterization and control, we use it to test predictive value. We additionally define a topology-change variable $\mathrm{TOPO}_i$ as the number of skeleton edges incident on cell $i$ that are created or destroyed between consecutive frames, as a coarse measure of local vortical-adjacency turnover (we use this term rather than ``reconnection'' because we do not detect vortex-line reconnection events directly).
+
+\subsection{Contact Realization Underdetermination}
+Adapting [9], we quantify the failure of field geometry to recover the realized vortical organization. As the operational proxy for that organization we use the skeleton \emph{degree}---the number of aligned vortical neighbors a cell has---which is the local incidence measure of realized vortical adjacency, the direct analogue of contact degree in [9]. We define
+\begin{equation}
+\mathrm{CRU}_{\text{turb}} \equiv 1 - R^2(O \rightarrow \text{degree}),
+\end{equation}
+the failure of a linear predictor of skeleton degree from the five geometric features, evaluated by cross-validation. This operationalizes \emph{local} topological realization (vortical adjacency incidence), not full vortex-topology reconstruction, and because it uses a linear predictor of a single local quantity it is a lower bound on the underdetermination rather than a complete characterization. Degree is, moreover, a conservative choice: among the graph statistics we examined it is the one geometry recovers \emph{best} (Section~\ref{sec:robust}), so reporting $\mathrm{CRU}_{\text{turb}}$ on degree understates the underdetermination relative to higher-order statistics. We stress a conceptual difference from the granular case: in turbulence vorticity is a derivative of velocity, so topology is recoverable in principle. $\mathrm{CRU}_{\text{turb}}$ therefore measures not principled (ontic) underdetermination but the failure of low-order features to recover topology---an \emph{epistemic} gap.
+
+\subsection{Incremental forecasting design}
+A same-time comparison ($\Delta O \rightarrow \Delta Y$ within one frame) is contaminated by target leakage, because $Y = 2\nu|S|^2$ and $|S| \in O$; we therefore discard it. Instead we forecast the future dissipation \emph{level} $Y(t+H)$ and include the present level $Y(t)$ as a persistence baseline in every model. We compare four nested models---$P = [Y(t)]$, $P{+}O$, $P{+}O{+}R$, and $P{+}O{+}\mathrm{TOPO}$---and report the incremental skill of relational information,
+\begin{equation}
+\Delta R^2(R\,|\,Y,O) = R^2(P{+}O{+}R) - R^2(P{+}O),
+\end{equation}
+which is the turbulent analogue of the history-augmented test ($H{+}R$ vs.\ $H{+}O$) in [9]. All models are linear, evaluated by 5-fold frame-level cross-validation. Confidence intervals use a moving-block bootstrap over frames (block length 10, $B=500$) to account for temporal autocorrelation. Horizons $H \in \{1,5,10,22,45\}$ frames span up to $\approx 2\tau_\eta$.
+
+% ════════════════════════════════════════
+\section{Results}
+
+\subsection{Topology adds predictive information beyond field geometry}
+Across all prediction horizons, relational features derived from the vortex skeleton add predictive information for future dissipation beyond persistence and field geometry (Table~\ref{tab:main}). At the longest horizon tested ($H = 45 \approx 2\tau_\eta$), the persistence baseline retains little skill ($R^2 = 0.141$), field geometry alone recovers $R^2 = 0.160$, and adding relational features raises this to $R^2 = 0.171$, a gain of $\Delta R^2(R\,|\,Y,O) = 0.0109$ (95\% CI $[0.0083, 0.0153]$). The relational gain is positive at every horizon and its confidence interval excludes zero for $H \geq 5$.
+
+\begin{table}[h]
+\centering
+\caption{Incremental dissipation forecasting ($128^3$, 4{,}096 cells, 100 frames). $R^2$ for nested models predicting future dissipation $Y(t{+}H)$; moving-block bootstrap 95\% CI in brackets ($B=500$).}
+\label{tab:main}
+\begin{tabular}{rccccc}
+\toprule
+$H$ & $P$ & $P{+}O$ & $P{+}O{+}R$ & $\Delta R^2(R\,|\,Y,O)$ & $\Delta R^2(\mathrm{TOPO}\,|\,Y,O)$ \\
+\midrule
+1  & 0.996 & 0.996 & 0.996 & $0.0000$ $[0.0000,0.0000]$ & $0.0000$ $[-0.0000,0.0000]$ \\
+5  & 0.910 & 0.910 & 0.911 & $0.0001$ $[0.0001,0.0003]$ & $0.0000$ $[-0.0000,0.0000]$ \\
+10 & 0.716 & 0.718 & 0.719 & $0.0010$ $[0.0007,0.0018]$ & $0.0000$ $[-0.0000,0.0000]$ \\
+22 & 0.339 & 0.349 & 0.356 & $0.0066$ $[0.0055,0.0097]$ & $0.0000$ $[-0.0000,0.0001]$ \\
+45 & 0.141 & 0.160 & 0.171 & $0.0109$ $[0.0083,0.0153]$ & $0.0000$ $[-0.0000,0.0001]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+By contrast, the simple topology-change count $\mathrm{TOPO}$ carries no measurable predictive value at any horizon (all CIs include zero; Table~\ref{tab:main}). The predictive information resides in the \emph{structure} of the skeleton (captured by the graph features $R$), not in the raw rate of edge rewiring.
+
+The absolute gains are small, but their interpretation depends on the reference. Because persistence and field geometry already capture most of the forecastable variance, the relevant comparison is against the variance that remains forecastable beyond persistence. At $H=45$, field geometry improves on persistence by $0.160-0.141 = 0.019$ and relational features add a further $0.011$; relational structure thus accounts for roughly $0.011/(0.171-0.141) \approx 37\%$ of the total predictive gain over persistence at that horizon (and $\approx 41\%$ at $H=22$). Framed as a fraction of total variance the relational contribution is at the percent level; framed as a fraction of the information that geometry itself adds beyond persistence, it is comparable to the geometric contribution. We caution that with $\sim$$4\times10^5$ observations even small effects reach significance, so the directional consistency, horizon-scaling, and multi-box reproducibility---rather than any single $R^2$ value---carry the weight of the claim.
+
+\subsection{The relational gain grows with prediction horizon}
+The incremental predictive value of topology increases monotonically with horizon (Figure~\ref{fig:main}a): $\Delta R^2(R\,|\,Y,O)$ rises from $\approx 0$ at $H = 1$ to $0.011$ at $H = 45$. This horizon-scaling is the signature expected if vortex topology encodes slowly-evolving structural information that field geometry---dominated by instantaneous gradient magnitudes---fails to carry forward. As an independent spatial check, eight non-overlapping $16^3$ subdomains reproduce this direction at every horizon, with positive $\Delta R^2$ in 63 of 64 cell-by-horizon estimates.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{fig_fne2_main.pdf}
+\caption{(a) Incremental relational skill $\Delta R^2(R\,|\,Y,O)$ versus prediction horizon, for eight independent $16^3$ subdomains (light), their mean (blue), and the full $128^3$ analysis (red). The gain grows with horizon and the multi-box and full-scale estimates agree. (b) $\mathrm{CRU}_{\text{turb}}$ relative to granular force-network ensembles and glassy dynamics. Turbulence occupies an intermediate position consistent with epistemic underdetermination.}
+\label{fig:main}
+\end{figure}
+
+\subsection{Geometry partially underdetermines vortex topology}
+The Contact Realization Underdetermination index for turbulence is $\mathrm{CRU}_{\text{turb}} = 0.58$ (Figure~\ref{fig:main}b): field geometry recovers only about 42\% of the variance in skeleton degree, despite vorticity being formally a derivative of the velocity field. Eight independent subdomains give a consistent $\mathrm{CRU}_{\text{turb}} = 0.54 \pm 0.08$. This places turbulence at an intermediate position on the underdetermination axis---well above glassy dynamics ($\mathrm{CRU} \approx 0$, where geometry determines neighborhood structure) and well below granular force-network ensembles ($\mathrm{CRU} = 0.94$--$0.99$ [9])---consistent with an epistemic rather than ontic underdetermination.
+
+\subsection{Robustness}
+\label{sec:robust}
+Five checks argue that the relational gain is neither a counting artifact nor a modeling artifact, that it does not merely re-encode local gradient information, that it is not an artifact of the chosen topological statistic, and that it does not depend on skeleton-construction choices.
+
+\textbf{Strengthened geometric baseline (vorticity and gradient invariants).} The most consequential objection is that the baseline $O$ omits vorticity, which is itself a field-geometry quantity and which the skeleton uses; and, more broadly, that vorticity, strain, and dissipation all derive from the velocity-gradient tensor, so the relational signal might be an alternative encoding of local gradient information rather than genuine topological structure. To address both, we rebuild the geometric baseline as $O_{\text{strong}}$ ($k=9$): the original five features plus vorticity magnitude $|\omega|$, enstrophy $|\omega|^2$, swirling strength $\lambda_{ci}$, and the $Q$-criterion. Against this far richer, gradient-saturated baseline, the relational gain persists at every horizon: $\Delta R^2(R\,|\,Y,O_{\text{strong}})$ remains positive and, at $H=45$, equals $0.0077$ versus $0.0109$ for the original baseline---about 70\% of the signal survives. The retained fraction grows with horizon (from $\approx 50\%$ at $H=5$ to $71\%$ at $H=45$). Correspondingly, $\mathrm{CRU}_{\text{turb}}$ computed against $O_{\text{strong}}$ falls only modestly, from $0.58$ to $0.52$: even given vorticity and the gradient invariants explicitly, local geometry still fails to recover about half the variance in skeleton degree. The relational signal is therefore not reducible to vorticity magnitude or to local gradient-tensor invariants; most of it reflects the spatial arrangement of vortical adjacency, not the pointwise strength of the field.
+
+\textbf{Beyond degree (counting).} After assigning degree to the geometric baseline ($P{+}O{+}\text{degree}$), the four higher-order graph features (clustering, 2-hop, betweenness, coordination variance) still add positive predictive value at every horizon ($\Delta R^2 = 0.00000$ to $0.00459$; CIs exclude zero for $H \geq 5$). The signal is therefore not reducible to the number of vortical contacts a cell has.
+
+\textbf{Nonlinear models.} As a sensitivity check---not a model-class-matched comparison, since nonlinear relational models are not separately benchmarked---we replace the linear models with gradient-boosted trees. The relational gain persists and, if anything, the linear estimate is the more conservative one (e.g.\ at $H=45$, $\Delta R^2$ is of comparable or larger magnitude under GBM in a held-out subset). The effect is therefore not an artifact of linear-model restriction.
+
+\textbf{Choice of topological statistic.} One might ask whether the underdetermination is specific to degree, the statistic used to define $\mathrm{CRU}_{\text{turb}}$. Repeating the geometric prediction for each of the five graph statistics shows degree is in fact the \emph{most} recoverable from geometry: $\mathrm{CRU}$ is $0.58$ for degree, $0.68$ for 2-hop connectivity, $0.78$ for coordination variance, $0.96$ for betweenness, and $\approx 1.0$ for clustering (against the weak baseline; the strengthened baseline $O_{\text{strong}}$ lowers each only marginally, e.g.\ degree $0.52$, betweenness $0.95$). The high values for clustering and betweenness should be read with caution---these statistics are sparse and low-variance on the skeleton, so their near-unity $\mathrm{CRU}$ partly reflects limited predictable signal rather than strong structure---but the qualitative point is robust: degree is the conservative choice, and the geometric underdetermination of vortical adjacency is, if anything, understated by reporting it on degree.
+
+\textbf{Threshold sensitivity.} Across nine combinations of skeleton thresholds ($\lambda_{\text{th}} \in \{0.5,1.0,1.5\}$, $\alpha_{\text{th}} \in \{0.5,0.7,0.9\}$), $\Delta R^2(R\,|\,Y,O)$ is positive and increases with horizon in all nine cases. The magnitude varies---stricter alignment thresholds yield sparser skeletons and smaller gains---but the direction and horizon-scaling are stable. The baseline thresholds yield a mid-range, not maximal, signal.
+
+% ════════════════════════════════════════
+\section{Discussion}
+
+\subsection{Two kinds of underdetermination}
+The central comparison of this work and its granular predecessor [9] is between what we suggest are two forms of underdetermination. In granular FNE, force balance at the rigid-grain limit genuinely leaves contact forces undetermined: this is plausibly an ontic underdetermination, and it produces a large $\mathrm{CRU}$ (0.94--0.99) and a large, immediate relational advantage in static force prediction. In turbulence, vorticity is a derivative of velocity and topology is recoverable in principle; the gap we measure ($\mathrm{CRU}_{\text{turb}} = 0.58$) may therefore be better read as epistemic---low-order field features simply fail to recover the topological organization. Consistent with this reading, the relational advantage in turbulence is small at instantaneous comparison but emerges, and grows, in forecasting: topology carries information about where dissipation is \emph{heading} that field geometry does not encode. The two systems may thus realize the same broad pattern---configuration incompletely determining the interaction structure that carries the physics---through different mechanisms. We present this distinction as an interpretive hypothesis, not as something the present data establish on their own. We also note, as in the granular case [9], that $\mathrm{CRU}_{\text{turb}}$ and the relational gain are not fully independent constructs: skeleton degree enters both the definition of $\mathrm{CRU}_{\text{turb}}$ (as the target geometry fails to predict) and the relational feature set $R$ (as one of five features). Their joint behavior should therefore be read as mutually consistent descriptive evidence rather than as two independent confirmations; the higher-order robustness check (Section~\ref{sec:robust}), which excludes degree from the incremental test, provides the part of the evidence that does not share this dependence.
+
+\subsection{Relation to the reconnection literature}
+Our finding that skeleton \emph{structure} predicts future dissipation, while the raw edge-rewiring count $\mathrm{TOPO}$ does not, is consistent with, but weaker than, the reconnection-cascade picture [3,4]. The contrast is also informative about what the relational signal is \emph{not}: that the predictive gain survives after degree is moved into the geometric baseline (Section~\ref{sec:robust}, higher-order check) shows it does not reduce to a simple count of vortical contacts, while the null result for the edge-rewiring rate $\mathrm{TOPO}$ shows it is not carried by the raw amount of topological change either. The information is in the arrangement of the skeleton, not in how many contacts a cell has or how fast they turn over. A related concern is circularity: vorticity, strain, and dissipation all derive from the velocity-gradient tensor, so one might worry that the relational signal is just a repackaging of local gradient information. The strengthened-baseline check (Section~\ref{sec:robust}) speaks directly to this: when the geometric baseline is given vorticity magnitude and the gradient-tensor invariants ($\lambda_{ci}$, $Q$, enstrophy) explicitly, most of the relational gain remains. The distinction is between \emph{pointwise} gradient quantities, which a single cell carries, and the \emph{spatial relationship} between vortical cells, which only the graph encodes; the latter is not a function of any one cell's gradient tensor, and it is the part that survives. We do not track vortex lines and cannot identify individual reconnection events; the null result for $\mathrm{TOPO}$ most plausibly reflects the coarseness of an edge-count proxy on $8^3$-point cells rather than an absence of dynamical relevance. A finer, line-based topology measure is the natural next step.
+
+\subsection{Limitations}
+Several limitations bound these results. The analysis uses a single dataset (forced isotropic turbulence); extension to wall-bounded and MHD turbulence, both available in JHTDB, is left for future work. The skeleton graph is a coarse cell-based proxy, not a reconstruction of vortex lines, and the topology-change variable is correspondingly crude. Velocity gradients (hence the dissipation target and the swirling strength) are computed by second-order central differences on the stored grid rather than with the spectral accuracy available from the database; because dissipation scales as the square of gradients, this introduces small-scale error in the absolute target (in our data the central-difference mean dissipation exceeds the dataset's spectral value $\langle\epsilon\rangle \approx 0.092$ by roughly 30\%, as expected for a second-order scheme on a grid resolving only $\approx 2.2\eta$). However, the same target $Y$ is used to evaluate every model, so the \emph{relative} comparison that defines $\Delta R^2(R\,|\,Y,O)$ is insensitive to a common bias in $Y$; the gradient choice would only threaten the conclusion if it systematically favored relational over geometric features, which we have no reason to expect. The analysis identifies predictive association, not causation. The present geometric basis is deliberately local and low-order; richer field representations (for example, multi-point or coarse-grained neighborhood descriptors) may recover more of the topology and thereby reduce $\mathrm{CRU}_{\text{turb}}$. Relatedly, $\mathrm{CRU}_{\text{turb}}$ is based on a linear predictor of degree and is therefore a lower bound on what geometry could recover; a nonlinear or richer geometric predictor might close part of the gap. Finally, the relational gains, while statistically clear, are small in absolute $R^2$, because persistence and field geometry already explain most of the forecastable variance at short horizons; the relational contribution is most visible precisely where persistence fails.
+
+\subsection{Conceptual outlook}
+Taken with its granular predecessor, this work provides a second instance---now epistemic rather than ontic---of a broader possibility: that predictive structure is sometimes carried by realized relational organization that configuration-based descriptions incompletely capture. Three threads seem worth pursuing. First, the horizon-scaling of the relational gain is itself a potential observable: if $\Delta R^2(R\,|\,Y,O)$ saturates at some horizon, that horizon would estimate a decorrelation time for the predictive content of vortex topology, turning a robustness curve into a measured time scale. Second, the present single-$\mathrm{Re}$ result leaves open whether $\mathrm{CRU}_{\text{turb}}$ depends on Reynolds number---the turbulent analogue of the system-size dependence of $\mathrm{CRU}$ in granular packings [9]; increasing scale separation at higher $\mathrm{Re}$ might widen the epistemic gap, placing different flows along a continuous underdetermination axis. Third, across both the granular and turbulent cases the predictive content lies in realized \emph{structure} rather than in its instantaneous rate of change (the null $\mathrm{TOPO}$ result here, and the primacy of static contact structure in [9]), which may be a more general feature of such systems than either underdetermination type alone. More speculatively, the epistemic case---where an interaction structure is recoverable in principle from the configuration yet poorly recovered by the descriptors actually used---has the same logical form as problems of representational opacity elsewhere, including the gap between a learned model's parameters and its realized computational structure. Whether this pattern recurs in other systems where a field underdetermines, or fails to expose, its own interaction structure remains an open question, to be settled by independent measurement rather than by analogy.
+
+% ════════════════════════════════════════
+\section{Conclusions}
+In forced isotropic turbulence, the structure of a vortex skeleton graph carries predictive information about future local dissipation beyond persistence and field-geometry features, and this information grows with prediction horizon. The effect is robust to model class and to skeleton-construction thresholds, and is not reducible to a contact count. Field geometry recovers only about half the variance in skeleton degree ($\mathrm{CRU}_{\text{turb}} = 0.58$), which we read, tentatively, as an epistemic underdetermination placing turbulence between glassy dynamics and granular force networks on a common axis. We do not claim that topology supersedes geometry in turbulence: field geometry remains the stronger predictor, and most of the forecastable variance is already captured by persistence and geometry. Rather, we show that under the present local geometric basis, realized vortical adjacency retains predictive information that geometry alone does not fully reconstruct. A line-based topology measure and cross-configuration replication are the clearest next steps.
+
+% ════════════════════════════════════════
+\section*{Data and Code Availability}
+Analysis used the publicly available JHTDB forced isotropic turbulence dataset [1]. Analysis code is available at the project repository (private during peer review).
+
+\section*{Acknowledgements}
+Data: Johns Hopkins Turbulence Database [1]. Full acknowledgements to be completed before submission.
+
+% ════════════════════════════════════════
+\begin{thebibliography}{99}
+\bibitem{jhtdb} Y. Li, E. Perlman, M. Wan, Y. Yang, C. Meneveau, R. Burns, S. Chen, A. Szalay, and G. Eyink, J. Turbulence \textbf{9}, N31 (2008).
+\bibitem{ml_diss} L. Guastoni, A. G\"uemes, A. Ianiro, S. Discetti, P. Schlatter, H. Azizpour, and R. Vinuesa, J. Fluid Mech. \textbf{928}, A27 (2021).
+\bibitem{yao_hussain} J. Yao and F. Hussain, Annu. Rev. Fluid Mech. \textbf{54}, 317 (2022).
+\bibitem{kerr} R.M. Kerr, Phys. Rev. Lett. \textbf{106}, 224501 (2011).
+\bibitem{taira2016} K. Taira, A.G. Nair, and S.L. Brunton, J. Fluid Mech. \textbf{795}, R2 (2016).
+\bibitem{iacobello} G. Iacobello, L. Ridolfi, and S. Scarsoglio, Physica A \textbf{563}, 125476 (2021).
+\bibitem{yeh} C.-A. Yeh, M. Gopalakrishnan Meena, and K. Taira, J. Fluid Mech. \textbf{910}, A15 (2021).
+\bibitem{meena_taira} M. Gopalakrishnan Meena and K. Taira, J. Fluid Mech. \textbf{915}, A10 (2021).
+\bibitem{fne1} K. Kim, ``Geometry Poorly Predicts Contact Realization in Granular Force-Network Ensembles'' (2026), Zenodo \texttt{10.5281/zenodo.20484747}.
+\bibitem{snoeijer} J.H. Snoeijer, T.J.H. Vlugt, M. van Hecke, and W. van Saarloos, Phys. Rev. Lett. \textbf{92}, 054302 (2004).
+\bibitem{unger} T. Unger, J. Kert\'esz, and D.E. Wolf, Phys. Rev. Lett. \textbf{94}, 178001 (2005).
+\end{thebibliography}
+
+\end{document}
