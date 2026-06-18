@@ -1,8 +1,10 @@
 # FNE-II: Vortex Topology and Turbulent Dissipation
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20745146.svg)](https://doi.org/10.5281/zenodo.20745146)
+
 Companion study to the granular force-network ensemble work
 (**FNE-I**: [fne-contact-realization](https://github.com/rudals7047-ship-it/fne-contact-realization),
-Zenodo [10.5281/zenodo.20484747](https://doi.org/10.5281/zenodo.20484747)).
+Zenodo [10.5281/zenodo.20514147](https://doi.org/10.5281/zenodo.20514147)).
 
 ## Summary
 
@@ -54,5 +56,6 @@ Preprint / working manuscript. Feedback welcome.
 
 ## Citation
 
-If referenced, please cite this repository and the companion FNE-I work
-(Zenodo DOI above). A dedicated DOI for this work will be minted on release.
+Kim, Kyeongmin. *Field Geometry Incompletely Reconstructs Realized Vortical
+Adjacency in Turbulent Dissipation Forecasting.* Zenodo, 2026.
+DOI: [10.5281/zenodo.20745146](https://doi.org/10.5281/zenodo.20745146)
