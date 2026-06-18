@@ -59,3 +59,8 @@ Preprint / working manuscript. Feedback welcome.
 Kim, Kyeongmin. *Field Geometry Incompletely Reconstructs Realized Vortical
 Adjacency in Turbulent Dissipation Forecasting.* Zenodo, 2026.
 DOI: [10.5281/zenodo.20745146](https://doi.org/10.5281/zenodo.20745146)
+
+## License
+
+- Code (`code/`): MIT — see [`LICENSE_CODE_MIT`](LICENSE_CODE_MIT).
+- Manuscript and figures (`paper/`, `figures/`): CC BY 4.0 — see [`LICENSE_MANUSCRIPT_CC_BY`](LICENSE_MANUSCRIPT_CC_BY).

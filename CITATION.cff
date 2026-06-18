@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: "Field Geometry Incompletely Reconstructs Realized Vortical Adjacency in Turbulent Dissipation Forecasting"
+message: "If you use this work, please cite it as below."
+type: article
+authors:
+  - family-names: Kim
+    given-names: Kyeongmin
+    email: rudals7047@gmail.com
+version: "v8"
+doi: 10.5281/zenodo.20745146
+date-released: 2026-06-18
